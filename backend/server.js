@@ -11,9 +11,21 @@ dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
 const app = express();
 
+// Needed on cloud hosts (Render, etc.) so req.ip is the real client IP
+app.set("trust proxy", 1);
+
 // Middleware
-app.use(cors());
-app.use(express.json());
+// CORS_ORIGIN = your frontend URL(s), comma separated. If unset, all origins are allowed (fine for local dev).
+app.use(cors({
+    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",").map((o) => o.trim()) : true
+}));
+app.use(express.json({ limit: "100kb" }));
+
+// Make sure the security settings exist before starting
+if (!process.env.JWT_SECRET || !process.env.COORDINATOR_CODE) {
+    console.error("Missing JWT_SECRET or COORDINATOR_CODE in backend/.env (see .env.example)");
+    process.exit(1);
+}
 
 // Home route
 app.get("/", (req, res) => {
@@ -21,8 +33,10 @@ app.get("/", (req, res) => {
 });
 
 // Connect Event Routes
+const authRoutes = require("./routes/authRoutes");
 const eventRoutes = require("./routes/eventRoutes");
 
+app.use("/api/auth", authRoutes);
 app.use("/api/events", eventRoutes);
 
 // Connect MongoDB
@@ -38,4 +52,5 @@ mongoose.connect(process.env.MONGODB_URI)
     })
     .catch((error) => {
         console.log("MongoDB Connection Error:", error.message);
+        process.exit(1); // let the host show a clear failure instead of a silent dead server
     });

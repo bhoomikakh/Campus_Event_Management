@@ -25,6 +25,17 @@ const eventSchema = new mongoose.Schema({
     organizer: {
         type: String,
         required: true
+    },
+    // 0 means unlimited seats
+    capacity: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
+    // The coordinator who created the event
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
     }
 }, {
     timestamps: true
